@@ -16,7 +16,7 @@ export default async (req) => {
     });
   }
 
-  // Intento 1: Gemini 2.0 Flash
+  // Intento 1: gemini-2.0-flash-preview-image-generation
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${apiKey}`;
     const res = await fetch(url, {
@@ -32,16 +32,36 @@ export default async (req) => {
       const parts = data?.candidates?.[0]?.content?.parts ?? [];
       const imgPart = parts.find(p => p.inlineData?.mimeType?.startsWith("image/"));
       if (imgPart) {
-        return new Response(JSON.stringify({ model: "gemini-2.0-flash", mimeType: imgPart.inlineData.mimeType, data: imgPart.inlineData.data }), {
+        return new Response(JSON.stringify({ model: "gemini-2.0-flash-preview", mimeType: imgPart.inlineData.mimeType, data: imgPart.inlineData.data }), {
           status: 200, headers: { "Content-Type": "application/json" },
         });
       }
     }
-  } catch (e) { console.warn("Gemini 2.0 Flash falló:", e.message); }
+  } catch (e) { console.warn("Intento 1 fallo:", e.message); }
 
-  // Intento 2: Imagen 3
+  // Intento 2: imagen-3.0-fast-generate-001
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-fast-generate-001:predict?key=${apiKey}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        instances: [{ prompt: `Storyboard frame: ${prompt}. Cinematic widescreen 16:9.` }],
+        parameters: { sampleCount: 1, aspectRatio: "16:9", safetySetting: "block_only_high" },
+      }),
+    });
+    const data = await res.json();
+    if (res.ok && data?.predictions?.[0]?.bytesBase64Encoded) {
+      return new Response(JSON.stringify({ model: "imagen-3-fast", mimeType: "image/png", data: data.predictions[0].bytesBase64Encoded }), {
+        status: 200, headers: { "Content-Type": "application/json" },
+      });
+    }
+    console.warn("Intento 2 fallo:", data?.error?.message);
+  } catch (e) { console.warn("Intento 2 error:", e.message); }
+
+  // Intento 3: imagen-3.0-generate-001
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`;
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
