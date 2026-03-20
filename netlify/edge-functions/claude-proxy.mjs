@@ -24,7 +24,7 @@ export default async (req) => {
       body: JSON.stringify({
         system_instruction: system ? { parts: [{ text: system }] } : undefined,
         contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 4000 },
+        generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
       }),
     });
 
