@@ -378,14 +378,18 @@ async function generateStoryboard() {
 
   try {
     document.getElementById('generateLabel').textContent='Generando escenas con Claude...';
+    const clPayload={model:"claude-sonnet-4-20250514",max_tokens:4000,
+      system:"Eres director de storyboard. Responde SOLO JSON válido sin texto extra ni backticks.",
+      messages:[{role:"user",content:buildPrompt(script,charDescs,inclDial,inclCam)}]
+    };
+    console.log("Enviando a Claude:", JSON.stringify(clPayload).substring(0,300));
     const clRes=await fetch("/api/claude",{
       method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:4000,
-        system:"Eres director de storyboard. Responde SOLO JSON válido sin texto extra ni backticks.",
-        messages:[{role:"user",content:buildPrompt(script,charDescs,inclDial,inclCam)}]
-      })
+      body:JSON.stringify(clPayload)
     });
     const clData=await clRes.json();
+    console.log("Respuesta Claude:", JSON.stringify(clData).substring(0,500));
+    if(!clData.content) throw new Error("Claude error: " + JSON.stringify(clData));
     const raw=clData.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
     const result=JSON.parse(raw);
     document.getElementById('boardTitle').textContent=result.title||'Storyboard';
