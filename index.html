@@ -378,19 +378,18 @@ async function generateStoryboard() {
 
   try {
     document.getElementById('generateLabel').textContent='Generando escenas con Claude...';
-    const clPayload={model:"claude-sonnet-4-20250514",max_tokens:4000,
+    const clPayload={
+      apiKey: document.getElementById('googleApiKey').value.trim(),
       system:"Eres director de storyboard. Responde SOLO JSON válido sin texto extra ni backticks.",
-      messages:[{role:"user",content:buildPrompt(script,charDescs,inclDial,inclCam)}]
+      prompt: buildPrompt(script,charDescs,inclDial,inclCam)
     };
-    console.log("Enviando a Claude:", JSON.stringify(clPayload).substring(0,300));
     const clRes=await fetch("/api/claude",{
       method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify(clPayload)
     });
     const clData=await clRes.json();
-    console.log("Respuesta Claude:", JSON.stringify(clData).substring(0,500));
-    if(!clData.content) throw new Error("Claude error: " + JSON.stringify(clData));
-    const raw=clData.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+    if(clData.error) throw new Error("Gemini error: " + clData.error);
+    const raw=clData.text.replace(/```json|```/g,'').trim();
     const result=JSON.parse(raw);
     document.getElementById('boardTitle').textContent=result.title||'Storyboard';
     state.frames=result.frames||[];
@@ -537,9 +536,9 @@ async function regenerateScene(idx){
   if(ov){ov.className='img-overlay loading';ov.style.opacity='1';ov.innerHTML=`<div class="loading-ring"></div><div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--google)">Redescribiendo...</div>`;}
   try{
     const cd=state.characters.map(c=>`- ${c.name}: ${c.desc}`).join('\n');
-    const res=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:700,system:"Eres experto en storyboards. Responde SOLO JSON válido sin backticks.",messages:[{role:"user",content:`Regenera este frame con perspectiva diferente. Misma escena y personajes.\nFRAME: ${JSON.stringify(f)}\nPERSONAJES: ${cd}\nESTILO: ${state.selectedStyle}\nDevuelve mismo objeto JSON con description,imagePrompt,mood,emoji actualizados.`}]})});
+    const res=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({apiKey:document.getElementById('googleApiKey').value.trim(),system:"Eres experto en storyboards. Responde SOLO JSON válido sin backticks.",prompt:`Regenera este frame con perspectiva diferente. Misma escena y personajes.\nFRAME: ${JSON.stringify(f)}\nPERSONAJES: ${cd}\nESTILO: ${state.selectedStyle}\nDevuelve mismo objeto JSON con description,imagePrompt,mood,emoji actualizados.`})});
     const d=await res.json();
-    const nf=JSON.parse(d.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim());
+    if(d.error) throw new Error(d.error); const nf=JSON.parse(d.text.replace(/```json|```/g,'').trim());
     state.frames[idx]=nf;
     const card=document.getElementById(`card${idx}`);
     if(card){card.querySelector('.frame-scene-label').textContent=`${nf.scene||''} · ${nf.mood||''}`;card.querySelector('.frame-description').textContent=nf.description||'';}
