@@ -1,5 +1,15 @@
 [build]
-  publish = "public"
+  publish = "."
 
 [functions]
   directory = "netlify/functions"
+```
+
+Pero hay otro problema — si los 3 archivos están sueltos en la raíz, la función `generate-image.mts` debería estar en una carpeta `netlify/functions/`. 
+
+**Dime: ¿cómo quedó exactamente tu repo?** ¿Los 3 archivos están así?
+```
+repo/
+├── netlify.toml
+├── index.html
+└── generate-image.mts   ← ¿está suelto aquí?
