@@ -1,0 +1,13 @@
+[build]
+  publish = "."
+
+[functions]
+  directory = "netlify/functions"
+
+[[edge_functions]]
+  function = "generate-image"
+  path = "/api/generate-image"
+
+[[edge_functions]]
+  function = "claude-proxy"
+  path = "/api/claude"
