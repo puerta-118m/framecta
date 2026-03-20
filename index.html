@@ -163,7 +163,7 @@
 <header>
   <div class="logo">Frame<span>Forge</span><sup>AI</sup></div>
   <div class="api-bar">
-    <div class="api-bar-label"><div class="google-dot"></div>Google AI Key</div>
+    <div class="api-bar-label"><div class="google-dot"></div>Google AI Key (guión)</div>
     <input class="api-key-input" id="googleApiKey" type="password" placeholder="AIza... (sesión segura)" oninput="onApiKeyChange()" autocomplete="off">
     <button class="toggle-key-btn" onclick="toggleKeyVisibility()">👁</button>
     <div class="api-status empty" id="apiStatus">Sin key</div>
@@ -290,21 +290,25 @@ function onApiKeyChange() {
 function toggleKeyVisibility() { const i=document.getElementById('googleApiKey'); i.type=i.type==='password'?'text':'password'; }
 window.addEventListener('load',()=>{ const s=sessionStorage.getItem('gai_key'); if(s){document.getElementById('googleApiKey').value=s;onApiKeyChange();} });
 
-// ── GOOGLE IMAGE VIA PROXY ───────────────────────
+// ── POLLINATIONS.AI (gratis, sin API key) ────────
 async function generateImage(prompt, apiKey) {
   try {
-    const res = await fetch(PROXY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, apiKey }),
-    });
-    const data = await res.json();
+    const encoded = encodeURIComponent(prompt + ', cinematic 16:9 storyboard frame, high quality');
+    const seed = Math.floor(Math.random() * 9999);
+    const url = `https://image.pollinations.ai/prompt/${encoded}?width=1280&height=720&seed=${seed}&nologo=true`;
+    const res = await fetch(url);
     if (!res.ok) {
       state.imgStats.failed++;
-      return { model:'none', dataUrl:null, error: data.error || `HTTP ${res.status}` };
+      return { model:'none', dataUrl:null, error: `HTTP ${res.status}` };
     }
+    const blob = await res.blob();
+    const dataUrl = await new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    });
     state.imgStats.generated++;
-    return { model: data.model, dataUrl: `data:${data.mimeType};base64,${data.data}` };
+    return { model: 'pollinations', dataUrl };
   } catch(e) {
     state.imgStats.failed++;
     return { model:'none', dataUrl:null, error: e.message };
