@@ -5,32 +5,39 @@ export default async (req) => {
     });
   }
 
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!apiKey) {
-    return new Response(JSON.stringify({ error: "ANTHROPIC_API_KEY not configured in Netlify environment variables" }), {
-      status: 500, headers: { "Content-Type": "application/json" },
-    });
-  }
-
   let body;
   try { body = await req.json(); }
   catch { return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers: { "Content-Type": "application/json" } }); }
 
+  const { apiKey, prompt, system } = body;
+  if (!apiKey) {
+    return new Response(JSON.stringify({ error: "Missing apiKey" }), {
+      status: 400, headers: { "Content-Type": "application/json" },
+    });
+  }
+
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    const res = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        system_instruction: system ? { parts: [{ text: system }] } : undefined,
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 4000 },
+      }),
     });
 
     const data = await res.json();
-    return new Response(JSON.stringify(data), {
-      status: res.status,
-      headers: { "Content-Type": "application/json" },
+    if (!res.ok) {
+      return new Response(JSON.stringify({ error: data?.error?.message ?? `HTTP ${res.status}` }), {
+        status: 502, headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    return new Response(JSON.stringify({ text }), {
+      status: 200, headers: { "Content-Type": "application/json" },
     });
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message }), {
